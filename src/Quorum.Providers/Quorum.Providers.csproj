@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- TargetFramework, Nullable etc. vem do Directory.Build.props -->
+  <ItemGroup>
+    <ProjectReference Include="..\Quorum.Core\Quorum.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Anthropic" Version="12.37.0" />
+    <PackageReference Include="Google.GenAI" Version="1.15.0" />
+    <PackageReference Include="Microsoft.Extensions.AI" Version="10.8.1" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.8.1" />
+  </ItemGroup>
+</Project>
