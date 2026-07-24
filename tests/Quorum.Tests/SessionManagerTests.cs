@@ -236,4 +236,55 @@ public class SessionManagerTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new AgentSessionManager(0));
     }
+
+    [Fact]
+    public async Task Sessao_mostra_o_modelo_que_realmente_respondeu_apos_fallback()
+    {
+        // "a" falha (operacional) e "b" entrega. O card NAO pode continuar exibindo
+        // "a": quem le o custo e o relatorio precisa saber qual IA respondeu.
+        var gerente = new AgentSessionManager();
+        var s = gerente.Start("Teste", "obj", FabricaOk,
+            new[] { Modelo("a"), Modelo("b") },
+            id => id == "a"
+                ? new ThrowingProvider()
+                : new ScriptedProvider(new CompletionResponse("resposta do b", Array.Empty<ToolCall>())));
+
+        await AguardarFim(s);
+
+        Assert.Equal(SessionStatus.Completed, s.Status);
+        Assert.Equal("b", s.ModelId);          // e nao "a", o escolhido no inicio
+        Assert.Equal("resposta do b", s.FinalText);
+    }
+
+    [Fact]
+    public async Task Sessao_sem_fallback_mantem_o_modelo_escolhido()
+    {
+        var gerente = new AgentSessionManager();
+        var s = gerente.Start("Teste", "obj", FabricaOk, new[] { Modelo("unico") },
+            _ => new ScriptedProvider(new CompletionResponse("ok", Array.Empty<ToolCall>())));
+
+        await AguardarFim(s);
+
+        Assert.Equal("unico", s.ModelId);
+    }
+
+    [Fact]
+    public async Task Parar_no_teto_de_passos_tem_estado_proprio()
+    {
+        // A IA pede ferramenta em toda resposta: o loop bate no teto. Isso NAO e
+        // "concluida" — o usuario precisa ver a diferenca sem abrir o relatorio.
+        var gerente = new AgentSessionManager();
+        var respostas = Enumerable.Range(0, 10)
+            .Select(i => new CompletionResponse("", new[] { new ToolCall($"c{i}", "navegar", "{}") }))
+            .ToArray();
+
+        var s = gerente.Start("Teste", "obj", FabricaOk, new[] { Modelo() },
+            _ => new ScriptedProvider(respostas),
+            new AgentLoopOptions(MaxSteps: 2));
+
+        await AguardarFim(s);
+
+        Assert.Equal(SessionStatus.StepLimitReached, s.Status);
+        Assert.Contains("Limite de passos", s.FinalText);
+    }
 }

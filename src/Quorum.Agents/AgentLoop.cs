@@ -47,6 +47,22 @@ public sealed class AgentLoop
         IToolExecutor executor,
         CancellationToken ct = default)
     {
+        // Carimba o modelo no resultado num unico ponto, em vez de repetir em
+        // cada um dos varios caminhos de saida do loop. Assim quem recebe o
+        // relatorio sempre sabe qual IA o produziu — inclusive quando o fallback
+        // trocou de modelo no meio do caminho.
+        var resultado = await RunCoreAsync(modelId, systemPrompt, objective, executor, ct)
+            .ConfigureAwait(false);
+        return resultado with { ModelId = modelId };
+    }
+
+    private async Task<AgentResult> RunCoreAsync(
+        string modelId,
+        string systemPrompt,
+        string objective,
+        IToolExecutor executor,
+        CancellationToken ct)
+    {
         ArgumentNullException.ThrowIfNull(executor);
         if (string.IsNullOrWhiteSpace(objective))
             throw new ArgumentException("O objetivo da tarefa nao pode ser vazio.", nameof(objective));

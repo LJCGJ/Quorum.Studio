@@ -42,6 +42,11 @@ public enum AgentStopReason
 
 /// <summary>Resultado final do loop agentic.</summary>
 /// <param name="FinalText">Texto final produzido pela IA (o relatorio).</param>
+/// <param name="ModelId">
+/// Modelo que efetivamente produziu este resultado. Importa quando o fallback
+/// troca de IA no meio: quem le o relatorio precisa saber quem respondeu, nao
+/// quem foi escolhido no inicio.
+/// </param>
 /// <param name="StopReason">Motivo do encerramento.</param>
 /// <param name="StepsUsed">Quantos passos foram gastos.</param>
 /// <param name="TotalTokens">
@@ -57,4 +62,5 @@ public sealed record AgentResult(
     AgentStopReason StopReason,
     int StepsUsed,
     long? TotalTokens = null,
-    bool OutputTruncated = false);
+    bool OutputTruncated = false,
+    string? ModelId = null);

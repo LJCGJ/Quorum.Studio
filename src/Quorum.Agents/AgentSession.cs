@@ -17,6 +17,13 @@ public enum SessionStatus
     /// <summary>Terminou e entregou um relatorio.</summary>
     Completed,
 
+    /// <summary>
+    /// Parou no teto de passos antes de concluir. Entregou o que conseguiu, mas
+    /// NAO e o mesmo que concluir: merece estado proprio para o usuario ver isso
+    /// sem precisar abrir o relatorio.
+    /// </summary>
+    StepLimitReached,
+
     /// <summary>Interrompida pelo usuario.</summary>
     Cancelled,
 
@@ -120,12 +127,16 @@ public sealed class AgentSession
         FinalText = resultado.FinalText;
         TotalTokens = resultado.TotalTokens;
         StepsUsed = resultado.StepsUsed;
+        // O modelo que efetivamente respondeu pode nao ser o escolhido no inicio,
+        // se o fallback trocou de IA no meio.
+        if (resultado.ModelId is { } modeloReal) ModelId = modeloReal;
+
         Status = resultado.StopReason switch
         {
             AgentStopReason.Completed => SessionStatus.Completed,
             AgentStopReason.Cancelled => SessionStatus.Cancelled,
             AgentStopReason.Failed => SessionStatus.Failed,
-            AgentStopReason.StepLimitReached => SessionStatus.Completed,
+            AgentStopReason.StepLimitReached => SessionStatus.StepLimitReached,
             _ => SessionStatus.Completed
         };
         Notify();
