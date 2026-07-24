@@ -22,5 +22,6 @@
     <ProjectReference Include="..\..\src\Quorum.Agents\Quorum.Agents.csproj" />
     <ProjectReference Include="..\..\src\Quorum.Providers\Quorum.Providers.csproj" />
     <ProjectReference Include="..\..\src\Quorum.Mcp\Quorum.Mcp.csproj" />
+    <ProjectReference Include="..\..\src\Quorum.Security\Quorum.Security.csproj" />
   </ItemGroup>
 </Project>

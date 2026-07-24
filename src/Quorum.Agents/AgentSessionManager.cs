@@ -19,6 +19,7 @@ public sealed class AgentSessionManager
 {
     private readonly ConcurrentDictionary<Guid, AgentSession> _sessoes = new();
     private readonly SemaphoreSlim _vagas;
+    private readonly AgentLoopOptions _options;
 
     /// <param name="maxSimultaneas">
     /// Quantas sessoes podem executar ao mesmo tempo. As demais aguardam vaga em
@@ -32,6 +33,7 @@ public sealed class AgentSessionManager
 
         MaxConcurrent = maxSimultaneas;
         _vagas = new SemaphoreSlim(maxSimultaneas, maxSimultaneas);
+        _options = AgentLoopOptions.Default;
     }
 
     public int MaxConcurrent { get; }
@@ -131,6 +133,83 @@ public sealed class AgentSessionManager
             // Inclui falhas ao PREPARAR o agente (Node ausente, banco fora do ar):
             // acontecem antes do loop, entao nao passam pelo tratamento dele.
             sessao.Fail($"{ex.Message}");
+        }
+        finally
+        {
+            if (vagaTomada) _vagas.Release();
+        }
+    }
+
+    /// <summary>
+    /// Dispara a revisao de uma tarefa ja concluida — OPCIONAL e sob demanda.
+    ///
+    /// Consome tokens de novo (uma chamada extra, sem ferramentas), por isso nunca
+    /// acontece sozinha: quem chama e a interface, depois de o usuario ver o
+    /// resultado e decidir que vale a segunda opiniao.
+    /// </summary>
+    /// <param name="sessao">Tarefa a revisar; precisa ter relatorio.</param>
+    /// <param name="reviewers">Cadeia de revisores (ver ReviewRouting).</param>
+    /// <param name="providerFactory">Cria o provider de um modelo.</param>
+    /// <param name="independent">Se o primeiro revisor e de outro provedor.</param>
+    public void StartReview(
+        AgentSession sessao,
+        IReadOnlyList<ModelInfo> reviewers,
+        Func<string, IAiProvider> providerFactory,
+        bool independent,
+        AgentLoopOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(sessao);
+        ArgumentNullException.ThrowIfNull(reviewers);
+        ArgumentNullException.ThrowIfNull(providerFactory);
+
+        if (reviewers.Count == 0)
+        {
+            sessao.FailReview(
+                "Nao ha outro modelo disponivel para revisar. Cadastre a chave de " +
+                "outro provedor para ter uma segunda opiniao independente.");
+            return;
+        }
+
+        _ = RevisarAsync(sessao, reviewers, providerFactory, independent, options);
+    }
+
+    private async Task RevisarAsync(
+        AgentSession sessao,
+        IReadOnlyList<ModelInfo> reviewers,
+        Func<string, IAiProvider> providerFactory,
+        bool independent,
+        AgentLoopOptions? options)
+    {
+        var vagaTomada = false;
+        try
+        {
+            sessao.BeginReview(reviewers[0].Id, independent);
+
+            await _vagas.WaitAsync(sessao.Token).ConfigureAwait(false);
+            vagaTomada = true;
+
+            await using var revisor = new ReviewAgent(
+                sessao.Objective, sessao.FinalText, sessao.ModelId);
+
+            // Revisao e uma leitura so: mais de um punhado de passos indicaria que
+            // algo saiu do previsto, e cada passo custa.
+            var limites = options ?? _options with { MaxSteps = 2 };
+
+            var runner = new FallbackAgentRunner(providerFactory, limites, sessao.Report);
+            var resultado = await runner
+                .RunAsync(reviewers, revisor.SystemPrompt, revisor.Objective,
+                          revisor.Tools, sessao.Token)
+                .ConfigureAwait(false);
+
+            sessao.CompleteReview(resultado);
+        }
+        catch (OperationCanceledException)
+        {
+            sessao.FailReview("Revisao interrompida.");
+        }
+        catch (Exception ex)
+        {
+            sessao.FailReview($"A revisao falhou: {ex.Message}");
         }
         finally
         {

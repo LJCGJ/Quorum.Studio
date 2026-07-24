@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- TargetFramework, Nullable etc. vem do Directory.Build.props -->
+  <ItemGroup>
+    <!-- DPAPI: cifra por conta de usuario no Windows. O pacote e multiplataforma,
+         mas a API so funciona no Windows — por isso a checagem em tempo de execucao. -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+  </ItemGroup>
+</Project>

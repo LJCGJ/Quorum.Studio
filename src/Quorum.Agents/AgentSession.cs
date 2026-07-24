@@ -82,6 +82,58 @@ public sealed class AgentSession
         get { lock (_gate) return _progresso.ToArray(); }
     }
 
+    // ---------------------------------------------------------------- revisao
+    // A revisao e OPCIONAL e sob demanda: o usuario ve o resultado primeiro e so
+    // entao decide se vale pagar por uma segunda opiniao.
+
+    /// <summary>Estado da revisao desta tarefa.</summary>
+    public SessionStatus? ReviewStatus { get; private set; }
+
+    /// <summary>Texto da revisao, quando concluida.</summary>
+    public string ReviewText { get; private set; } = string.Empty;
+
+    /// <summary>Modelo que revisou.</summary>
+    public string? ReviewModelId { get; private set; }
+
+    /// <summary>Tokens gastos na revisao, contabilizados a parte do teste.</summary>
+    public long? ReviewTokens { get; private set; }
+
+    /// <summary>Se o revisor veio de outro provedor (opiniao independente).</summary>
+    public bool ReviewIsIndependent { get; private set; }
+
+    /// <summary>Ja existe revisao concluida ou em andamento.</summary>
+    public bool HasReview => ReviewStatus is not null;
+
+    internal void BeginReview(string modelId, bool independent)
+    {
+        ReviewModelId = modelId;
+        ReviewIsIndependent = independent;
+        ReviewStatus = SessionStatus.Running;
+        Notify();
+    }
+
+    internal void CompleteReview(AgentResult resultado)
+    {
+        ReviewText = resultado.FinalText;
+        ReviewTokens = resultado.TotalTokens;
+        if (resultado.ModelId is { } m) ReviewModelId = m;
+
+        ReviewStatus = resultado.StopReason switch
+        {
+            AgentStopReason.Cancelled => SessionStatus.Cancelled,
+            AgentStopReason.Failed => SessionStatus.Failed,
+            _ => SessionStatus.Completed
+        };
+        Notify();
+    }
+
+    internal void FailReview(string motivo)
+    {
+        ReviewText = motivo;
+        ReviewStatus = SessionStatus.Failed;
+        Notify();
+    }
+
     /// <summary>Disparado a cada mudanca, para a interface se atualizar.</summary>
     public event Action<AgentSession>? Changed;
 

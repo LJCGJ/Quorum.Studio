@@ -1,228 +1,200 @@
-# Quorum — Documento de Arquitetura (v5)
+# Quorum — Arquitetura e Decisões
 
-> QA · AI Test Automation. Reescrita profissional do T2M Security Manager em
-> C# .NET 8 + Avalonia UI, com orquestração multi-IA nativa.
+> Documento vivo. Registra **por que** o Quorum é como é: as decisões tomadas, o que
+> foi descartado e as regras que nasceram de erros reais durante a construção.
 >
-> Status: proposta para revisão. Nada codado ainda — este é o mapa antes da obra.
+> Última revisão: julho de 2026 — projeto funcionalmente completo, aguardando a
+> validação com créditos (Fase D).
 
 ---
 
-## 1. Objetivo da v5
+## 1. O problema
 
-Recriar o app sobre uma fundação moderna, corrigindo os problemas estruturais da
-v4.2 e adicionando a capacidade que nenhum concorrente de QA tem: **múltiplas IAs
-trabalhando de forma coordenada**, com um roteador que escolhe o provedor e o
-modelo certos para cada tarefa.
+Ferramentas de automação de teste guiadas por IA em geral amarram você a um provedor.
+Se aquele modelo estiver fora do ar, com cota esgotada ou for caro demais para a tarefa,
+você não tem alternativa — e paga o modelo mais capaz mesmo quando um barato bastaria.
 
-Três metas que guiam cada decisão abaixo:
+O Quorum trata **a escolha da IA como parte do produto**: qual provedor, qual modelo,
+quanto custa, o que fazer quando falha e, opcionalmente, quem revisa o resultado.
 
-1. **Multiplataforma real** — Windows, Linux e macOS nativos (Avalonia).
-2. **Um único processo** — sem a costura frágil C++ ↔ Python por stdin/stdout.
-3. **Profissional de verdade** — visual limpo, arquitetura testável, pronto para
-   uso real e não só demonstração.
+## 2. Fundação técnica
 
----
-
-## 2. Por que trocar a fundação
-
-| Problema na v4.2 | Origem | Como a v5 resolve |
+| Camada | Escolha | Motivo |
 |---|---|---|
-| Só roda no Windows | C++/CLI + WinForms | Avalonia (Win/Linux/macOS) |
-| Layout por pixel, cada botão novo é um Tetris | WinForms posicional | XAML com layout responsivo |
-| Visual "2010" | WinForms | Tema Fluent moderno, claro/escuro |
-| Bugs de comunicação (marcadores CHAT_MSG, "python não encontrado") | costura por texto stdin/stdout | tudo em processo, chamadas de método |
-| Instalador pesado (Python + Node + libs) | dependências externas | .NET runtime; Node só se usar MCP via npx |
-| Modelo aposentado derruba o app | IDs fixos no código | registro dinâmico + fallback |
+| Linguagem | C# / .NET 8 (LTS) | um runtime, três sistemas operacionais |
+| Interface | Avalonia 11 + Fluent, MVVM | XAML multiplataforma; layout responsivo |
+| MCP | `ModelContextProtocol` 1.4.x (oficial) | protocolo falado com tipos, não por texto |
+| IA | `IChatClient` do `Microsoft.Extensions.AI` | tool-use uniforme entre os três provedores |
+| Provedores | SDKs **oficiais**: Anthropic 12.x, OpenAI (via `Microsoft.Extensions.AI.OpenAI`), `Google.GenAI` | acompanham mudanças de API sem intermediário |
+| Segredos | DPAPI no Windows; permissões de arquivo no restante | usa o que o sistema oferece — e admite quando não oferece |
 
-O código Python em si (a lógica dos loops de agente) é bom — ele vira a
-**especificação** do que reescrever em C#, não código a portar linha a linha.
+### Por que não C++ em parte do sistema
 
----
+Foi considerado, por causa da orquestração de várias IAs simultâneas. Não se aplica:
+o trabalho local (rotear, montar JSON, atualizar a interface) leva menos de um
+milissegundo, enquanto cada chamada de IA leva segundos **de espera de rede**. O app é
+I/O-bound do início ao fim, e `async/await` é a ferramenta certa para isso.
 
-## 3. Stack
+O gargalo real de rodar muitas automações ao mesmo tempo é **memória** (cada agente de
+tela sobe um Chromium) e **limite de requisições por minuto** do provedor. Nenhum dos
+dois melhora trocando de linguagem — por isso existe um teto de tarefas simultâneas.
 
-- **Linguagem:** C# / .NET 8 (LTS)
-- **UI:** Avalonia UI 11 + tema Fluent; padrão **MVVM** (CommunityToolkit.Mvvm)
-- **MCP:** `ModelContextProtocol` 1.4.x (oficial, Microsoft + Anthropic) —
-  `StdioClientTransport` sobe Playwright / DBHub / MongoDB via npx, igual hoje
-- **IA:** SDKs nativos —
-  - `Anthropic.SDK` (Claude)
-  - `OpenAI` (GPT)
-  - Gemini via `Microsoft.Extensions.AI` ou REST direto
-  - camada comum: `Microsoft.Extensions.AI` para abstrair tool-use entre provedores
-- **Banco de teste local:** `Microsoft.Data.Sqlite`; Oracle via `Oracle.ManagedDataAccess.Core`
-- **Segurança:** DPAPI no Windows; no Linux/macOS, libsecret/Keychain (abstração própria)
-- **Instalador:** por plataforma — MSIX/Inno (Win), AppImage/deb (Linux), dmg (macOS)
+C++ só faria sentido para inferência local de modelos, e mesmo aí a via seria uma
+biblioteca pronta consumida pelo .NET.
 
----
-
-## 4. Estrutura em camadas (solução .NET)
+## 3. Estrutura
 
 ```
-Quorum.sln
-├── Quorum.App          (Avalonia — Views + ViewModels, MVVM)
-├── Quorum.Core         (domínio: contratos, modelos, roteador — SEM UI, SEM IO)
-├── Quorum.Providers     (Claude / OpenAI / Gemini — implementam IAiProvider)
-├── Quorum.Mcp          (cliente MCP: sobe servidores, expõe ferramentas)
-├── Quorum.Agents       (loops agentic: Tela, API, Banco — orquestram IA + MCP)
-├── Quorum.Security     (cofre de credenciais multiplataforma)
-└── Quorum.Tests        (xUnit — testa Core e Agents sem gastar créditos, com mocks)
+Quorum.Core        domínio puro (sem IO): modelos, roteador, contratos de IA,
+                   extração de scripts, geração de relatório
+Quorum.Providers   Claude · OpenAI · Gemini + catálogo dinâmico de modelos
+Quorum.Agents      loop agentic, classificação de falhas, fallback, sessões simultâneas
+Quorum.Mcp         cliente MCP e agentes de tela/banco
+Quorum.Security    cofre de chaves
+Quorum.App         interface Avalonia (MVVM)
+Quorum.Tests       xUnit — roda sem chave, sem rede, sem Node
+Quorum.McpSmokeTest   verificação de ambiente, custo zero
 ```
 
-Regra de dependência: `App → Agents → {Providers, Mcp, Core}`; `Core` não depende
-de ninguém. Isso é o que torna o roteador e os agentes **testáveis sem chamar IA
-de verdade** (mocka-se `IAiProvider`) — economia direta de créditos na Fase 2.
+Dependências apontam sempre para dentro: `App → Agents → {Providers, Mcp, Core}`, e
+`Core` não depende de ninguém. É isso que torna a suíte inteira executável de graça.
 
----
+## 4. Decisões que moldaram o produto
 
-## 5. O coração: orquestração multi-IA
+### 4.1 Um adaptador, não três (a "Opção B")
 
-### 5.1 Registro de modelos
+Os três SDKs expõem `IChatClient`. A tradução entre os tipos do Quorum e essa interface
+vive num **único** `ChatClientAiProvider`; cada provider concreto só constrói seu
+cliente (~15 linhas).
 
-Um `ModelRegistry` mantém, para cada modelo, metadados que o roteador usa:
+A alternativa — falar com cada SDK diretamente — significava três traduções paralelas.
+Era exatamente onde a versão anterior deste projeto acumulava divergências: o prompt de
+sistema chegava a dois provedores e se perdia no terceiro.
 
-```
-ModelInfo {
-  Provider        (Claude | OpenAI | Gemini)
-  Id              (ex.: claude-haiku-4-5-20251001)
-  SupportsTools   (bool)
-  ContextWindow   (tokens)
-  CostIn, CostOut ($/milhão de tokens)
-  Tier            (Rápido | Equilibrado | Potente)
-}
-```
+### 4.2 Provider por modelo
 
-A lista é **carregada do provedor** (como a v4.2 já faz com o botão ⟳ Buscar) e
-cacheada. Modelo aposentado some da lista sozinho — o bug que já te mordeu duas
-vezes deixa de existir por construção.
+Os três SDKs vinculam o modelo na construção do cliente. Em vez de contornar, a fábrica
+passou a criar **um provider por modelo** — o que encaixou com o executor de fallback,
+que já instanciava um provider para cada modelo da cadeia. O adaptador guarda o modelo
+ao qual foi vinculado e **falha alto** se receber requisição para outro, em vez de
+depender de o SDK honrar o override.
 
-### 5.2 Roteador por regras (camada 1 — começamos por aqui)
+### 4.3 O roteador é uma função pura
 
-Uma função pura em `Quorum.Core`:
+Dada uma tarefa e as preferências, escolhe o modelo. Sem rede, sem estado mutável: cada
+regra vira um teste unitário, e a lógica que decide onde seu dinheiro é gasto está
+provada antes de qualquer chamada paga.
 
-```
-IAiProvider Rotear(Tarefa t, Preferencias p):
-  - chat casual, sem ferramentas      → Tier Rápido   (Haiku / Flash / mini)
-  - automação com tool-use            → Tier Equilibrado, SupportsTools=true
-  - análise de relatório/log longo    → maior ContextWindow disponível
-  - respeita override do usuário (se ele fixou um modelo, usa esse)
-  - respeita orçamento (se p.ModoEconomico, nunca sobe de tier sem necessidade)
-```
+Regras: chat e leitura de página → tier rápido; automação → tier equilibrado **com
+tool-use**; análise longa → maior janela de contexto. Modo economia inverte a
+prioridade: o mais barato que ainda atende. Fixação manual desliga a escolha automática.
 
-Por ser função pura, cada regra vira um teste unitário. Nada de IA decidindo
-ainda — barato, previsível, fácil de depurar.
+### 4.4 Só modelos que você pode usar
 
-### 5.3 Fallback e resiliência
+O roteador considera apenas provedores com chave cadastrada. Sem isso, com uma chave
+Claude ele poderia eleger um modelo Gemini — e a fábrica, que detecta o provedor **pela
+chave**, criaria um cliente Claude pedindo um modelo que ele não conhece. Falha na
+primeira chamada, com crédito já gasto.
 
-O que você aprendeu no Gemini (ResourceExhausted, MALFORMED) vira política de
-primeira classe:
+`AvailableProviders` distingue **nulo** (não especificado, sem restrição) de **vazio**
+(verificado, não há nenhum) — a segunda situação produz a orientação de cadastrar uma
+chave, em vez de um erro genérico.
 
-```
-- provedor falha / estoura cota → tenta o próximo do mesmo tier (outra IA)
-- retry com backoff em erro transitório
-- se todos falham, mensagem clara com a causa real (não "token não encontrado")
-```
+### 4.5 Catálogo vindo do provedor
 
-Um relatório pode nascer de **duas IAs**: Haiku roda a automação, e se você pedir
-"revise criticamente este resultado", um modelo potente de outro provedor faz a
-segunda leitura. Esse é o "quorum" do nome.
+Modelos são aposentados sem aviso. A lista é buscada por HTTP direto em cada provedor;
+modelos conhecidos mantêm a tabela de preços, e os novos entram marcados como **preço
+desconhecido** — nunca como custo zero, que faria o modo economia elegê-los como os mais
+baratos do catálogo.
 
-### 5.4 Camada 2 (futuro, só se valer a pena)
+### 4.6 A revisão é opcional, sob demanda e avisa o custo
 
-Um modelo barato classifica a tarefa antes de rotear ("isto é chat, scan, ou
-automação de banco?"). **Não** entra no MVP — gasta token e é difícil de depurar.
-Fica documentado como evolução.
+O botão só aparece **depois** do resultado: você lê o relatório e decide se aquele caso
+específico merece a segunda opinião. A tarja diz quem revisaria e que consome tokens.
 
----
+O revisor nunca é o modelo que escreveu (um modelo tende a concordar com o próprio
+texto) e prefere **outro provedor**; se só houver um, a interface avisa que a opinião é
+menos independente. A revisão **não usa ferramentas** — é leitura crítica, uma chamada
+só, com teto de dois passos — e seus tokens são contabilizados à parte.
 
-## 6. Os agentes (portados do Python)
+### 4.7 Persistência de chaves é opt-in e honesta
 
-Cada modo vira uma classe em `Quorum.Agents` implementando `IAgent`:
+Desligada por padrão. No Windows as chaves são cifradas com DPAPI no escopo da conta;
+em Linux e macOS não há equivalente sem dependências nativas, então o arquivo fica com
+permissão `0600` **sem cifra** — e a interface mostra o texto correspondente ao sistema
+em uso. Desmarcar a opção **apaga** o que estava guardado: "não quero mais que lembre"
+é um pedido para remover, não para congelar.
 
-| Agente | Servidor/driver | Equivalente v4.2 |
-|---|---|---|
-| `ScreenAgent`   | Playwright MCP (npx) | executar() |
-| `ApiAgent`      | HttpClient nativo    | executar_api() |
-| `SqlAgent`      | DBHub MCP (npx)      | executar_banco() |
-| `OracleAgent`   | Oracle.ManagedDataAccess | executar_oracle() |
-| `MongoAgent`    | MongoDB MCP (npx)    | executar_mongo() |
-| `DomScanAgent`  | HttpClient + AngleSharp | extrair_contexto_dom() |
-| `TokenAgent`    | Playwright/Selenium  | get_token.py |
+## 5. Regras que nasceram de erros
 
-O loop agentic (IA pede ferramenta → executa → devolve resultado → repete até
-concluir) fica **um só**, genérico, em `Quorum.Agents`. Hoje ele está triplicado
-no Python (um por provedor); em C# com `Microsoft.Extensions.AI` o tool-use é
-uniforme, então some a duplicação — e some junto o bug do "Gemini sem system
-prompt", porque a montagem da chamada passa a ser única.
+Cada uma destas custou um bug real durante a construção. Estão no código como
+comentário, e aqui como regra.
 
-Todas as correções da v4.2 já nascem embutidas aqui (guardrails de custo, limite
-de histórico, limite de passos, somente-leitura no banco por padrão).
+**Falha operacional ≠ bug.** Rede, cota, chave recusada e timeout encerram a tarefa com
+razão legível e disparam o fallback. Já `NullReferenceException`, `ArgumentException` e
+falhas fatais **sobem** — mascarar um defeito nosso como "todos os modelos falharam"
+esconde o problema e queima crédito tentando.
 
----
+**Cada agente traduz as exceções do seu domínio.** O classificador genérico é a última
+linha, não a primeira. Bibliotecas reais usam `InvalidOperationException` para condições
+operacionais (o ADO.NET a lança para "conexão fechada"), e é o executor concreto quem
+sabe disso. No MCP, argumento inválido vira erro **para a IA corrigir**, porque foi ela
+quem montou os parâmetros.
 
-## 7. Interface (Avalonia, MVVM)
+**Timeout de rede não é cancelamento do usuário.** `TaskCanceledException` herda de
+`OperationCanceledException`; sem o filtro `when (ct.IsCancellationRequested)`, um
+timeout do provedor era tratado como "o usuário parou" e o fallback nunca disparava.
 
-Telas principais:
+**Falha marcada, não descrita.** Um erro sinalizado pelo protocolo MCP marca o resultado
+como erro de verdade, e não só o menciona no texto — assim a IA sabe que a ferramenta
+falhou em vez de precisar deduzir.
 
-- **Janela principal** — barra lateral de navegação (não mais botões soltos):
-  Chat · Automação · Scripts · Relatórios · Configurações
-- **Chat** — conversa + seletor de modo (Chat / Scan / Automação) como segmented
-  control moderno; indicador da IA ativa; status "pensando" não-bloqueante
-- **Automação** — formulários de API / Banco / Tela como painéis limpos, com a
-  validação visual que a v4.2 já tem (borda vermelha + mensagem)
-- **Configurações** — pastas, modelo, limites, tema; mais a nova aba de
-  **roteamento** (economia vs capacidade, override de modelo por modo)
-- **Tema claro/escuro** — nativo do Avalonia, sem o AplicarTemaRecursivo manual
+**Truncar em silêncio induz a conclusão errada.** Resultado cortado leva marcador
+explícito, senão a IA conclui que a consulta retornou só aquelas linhas.
 
-Async de verdade (`async/await`) em vez de BackgroundWorker — a UI nunca congela
-e o código fica linear de ler.
+**Status HTTP 4xx/5xx não é falha da ferramenta.** A requisição funcionou; a resposta é
+justamente o objeto do teste. Quem julga se o 404 era esperado é a IA.
 
----
+**Validar sempre em Debug e Release.** Código sob `#if DEBUG` nunca é compilado em
+Release, e o build Debug incremental não revalida XAML — um erro de binding passou em
+Debug e só apareceu em Release.
 
-## 8. Segurança
+**Teste não fixa formato dependente de cultura.** Um `assert` esperando `"1.234"` quebra
+em máquina com separador diferente.
 
-- Credenciais nunca em texto: `ISecretVault` com implementação por SO
-  (DPAPI / libsecret / Keychain)
-- Banco somente-leitura por padrão (mantido)
-- Chave e prompt nunca em argv (mantido — mas agora é chamada de método, some o
-  risco de vazar na lista de processos por natureza)
-- Nada sai da máquina exceto para o provedor de IA cuja chave o usuário forneceu
+## 6. Como a suíte roda sem gastar nada
 
----
+| O que seria pago/externo | Substituto no teste |
+|---|---|
+| Chamada a provedor de IA | provider roteirizado (respostas programadas) |
+| Requisição HTTP | `HttpMessageHandler` falso |
+| Servidor MCP (Node) | `IMcpSession` falsa |
+| Cofre de chaves | pasta temporária, apagada ao fim |
 
-## 9. Roadmap de implementação (uma etapa por commit, seu padrão)
+O CI compila e roda tudo no Ubuntu, Windows e macOS a cada push. A interface é compilada
+nos três, mas não executada — não há display nos runners; a verificação visual é local.
 
-Fase A — Fundação
-1. Solução .NET + estrutura de projetos + CI (build nos 3 SOs)
-2. `Quorum.Core`: modelos, `ModelRegistry`, roteador + testes
-3. `Quorum.Providers`: Claude, depois OpenAI, depois Gemini (com testes mockados)
+## 7. Roadmap
 
-Fase B — Agentes (sem gastar crédito: testes com mock)
-4. Loop agentic genérico + `ApiAgent` (o mais simples, sem MCP externo)
-5. `DomScanAgent` e `TokenAgent`
-6. `Quorum.Mcp` + `ScreenAgent` (Playwright)
-7. `SqlAgent`, `OracleAgent`, `MongoAgent`
+**Concluído**
+- Fundação: solução, roteador, registro de modelos, CI
+- Provedores: Claude, OpenAI e Gemini sobre um adaptador único
+- Agentes: loop agentic, classificação de falhas, fallback, sessões simultâneas
+- MCP: cliente, agentes de tela e banco, smoke test de ambiente
+- Interface: Chat, Automação, Modelos, Configurações
+- Saídas: extração de scripts e relatório HTML
+- Segurança: cofre de chaves opt-in
+- Quorum de revisão: segunda IA sob demanda
 
-Fase C — Interface
-8. Shell Avalonia + navegação + tema
-9. Chat + modos
-10. Formulários de automação + Configurações + aba de roteamento
+**Pendente**
+- **Fase D — validação com créditos.** Roteiro: smoke test do MCP (custo zero) → teste
+  de API contra endpoint público (o caminho mais barato que exercita a cadeia inteira) →
+  SQLite local → navegador. Só depois, automações contra sistemas reais.
+- Instaladores por plataforma (MSIX/Inno, AppImage/deb, dmg)
+- Assinatura digital do executável no Windows
 
-Fase D — Empacotar e validar
-11. Cofre de credenciais por SO
-12. Instaladores (Win/Linux/macOS)
-13. **Validação com créditos** (só aqui entra dinheiro — fim do projeto, como combinado)
-
----
-
-## 10. Decisões em aberto (para você bater o martelo)
-
-1. **Nome da solução/repo:** `Quorum` puro, ou `QuorumQA` / `Quorum.Studio`?
-2. **Namespace raiz:** sugiro `Quorum.*` (ver estrutura acima) — confirma?
-3. **Gemini:** SDK do Google para .NET é mais imaturo que os outros; tudo bem
-   começar Gemini via REST direto (mais controle) e migrar depois?
-4. **Licença:** manter GPL-3.0 (como a v4.2) ou revisar agora que é projeto novo?
-5. **Compatibilidade de dados:** importar as chaves/config da v4.2 do usuário na
-   primeira execução, ou começar limpo?
-```
-```
+**Considerado e adiado**
+- Classificar a tarefa com uma IA antes de rotear: gasta token e é difícil de depurar;
+  as regras atuais resolvem sem custo.
+- Correr vários modelos pela mesma resposta e ficar com o primeiro: paga três, descarta
+  dois. O paralelismo que vale é o de tarefas independentes, que já existe.
