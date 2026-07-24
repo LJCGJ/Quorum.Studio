@@ -79,6 +79,7 @@ public sealed class ModelRouter
             .OrderBy(m => TierDistance(m.Tier, targetTier, prefs.EconomyMode))
             .ThenByDescending(m => prefs.PreferredProvider.HasValue &&
                                    m.Provider == prefs.PreferredProvider.Value)
+            .ThenBy(m => m.PricingKnown ? 0 : 1)   // preco desconhecido: nunca "o mais barato"
             .ThenBy(m => m.CostInputPerMillion + m.CostOutputPerMillion)
             .ThenBy(m => m.Id, StringComparer.Ordinal) // desempate estavel
             .First();
@@ -113,6 +114,7 @@ public sealed class ModelRouter
             .OrderBy(m => TierDistance(m.Tier, targetTier, prefs.EconomyMode))
             .ThenByDescending(m => prefs.PreferredProvider.HasValue &&
                                    m.Provider == prefs.PreferredProvider.Value)
+            .ThenBy(m => m.PricingKnown ? 0 : 1)
             .ThenBy(m => m.CostInputPerMillion + m.CostOutputPerMillion)
             .ThenBy(m => m.Id, StringComparer.Ordinal)
             .ToList();

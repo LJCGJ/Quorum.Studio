@@ -13,6 +13,13 @@ namespace Quorum.Core.Models;
 /// <param name="ContextWindow">Janela de contexto em tokens.</param>
 /// <param name="CostInputPerMillion">Custo por milhao de tokens de entrada (USD).</param>
 /// <param name="CostOutputPerMillion">Custo por milhao de tokens de saida (USD).</param>
+/// <param name="PricingKnown">
+/// Se os precos acima sao conhecidos. Modelos recem-descobertos no provedor
+/// aparecem sem tabela de preco: exibi-los como "custo zero" faria o modo
+/// economia escolhe-los como os mais baratos do catalogo, que e o oposto do
+/// pretendido. Com esta marca, o roteador os trata como ultima opcao em criterio
+/// de custo e a interface mostra "—" em vez de "$0".
+/// </param>
 public sealed record ModelInfo(
     AiProvider Provider,
     string Id,
@@ -21,4 +28,5 @@ public sealed record ModelInfo(
     bool SupportsTools,
     int ContextWindow,
     decimal CostInputPerMillion,
-    decimal CostOutputPerMillion);
+    decimal CostOutputPerMillion,
+    bool PricingKnown = true);
