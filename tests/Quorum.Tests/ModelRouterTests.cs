@@ -144,4 +144,67 @@ public class ModelRouterTests
         var b = roteador.Route(t, RoutingPreferences.Default);
         Assert.Equal(a.Selected!.Id, b.Selected!.Id); // mesma entrada, mesma saida
     }
+
+    // ================= disponibilidade de provedor =================
+    // Sem chave de um provedor, seus modelos nao sao opcao: a fabrica detecta o
+    // provedor PELA CHAVE, entao rotear para um modelo sem chave criaria um
+    // cliente de um provedor pedindo o modelo de outro — falha paga.
+
+    private static IReadOnlySet<AiProvider> Apenas(params AiProvider[] p) => p.ToHashSet();
+
+    [Fact]
+    public void So_escolhe_modelo_de_provedor_com_chave()
+    {
+        var r = NovoRoteador().Route(
+            new TaskDescriptor(TaskKind.Chat),
+            new RoutingPreferences(AvailableProviders: Apenas(AiProvider.Claude)));
+
+        Assert.True(r.Success);
+        Assert.Equal(AiProvider.Claude, r.Selected!.Provider);
+    }
+
+    [Fact]
+    public void Cadeia_de_fallback_so_traz_provedores_com_chave()
+    {
+        var cadeia = NovoRoteador().RouteWithFallback(
+            new TaskDescriptor(TaskKind.Automation),
+            new RoutingPreferences(AvailableProviders: Apenas(AiProvider.Gemini, AiProvider.OpenAI)));
+
+        Assert.NotEmpty(cadeia);
+        Assert.All(cadeia, m => Assert.NotEqual(AiProvider.Claude, m.Provider));
+    }
+
+    [Fact]
+    public void Sem_nenhuma_chave_a_mensagem_orienta_a_cadastrar()
+    {
+        var r = NovoRoteador().Route(
+            new TaskDescriptor(TaskKind.Chat),
+            new RoutingPreferences(AvailableProviders: new HashSet<AiProvider>()));
+
+        Assert.False(r.Success);
+        Assert.Contains("Nenhuma chave de API", r.Reason);
+    }
+
+    [Fact]
+    public void Pin_de_modelo_sem_chave_do_provedor_falha_com_motivo_claro()
+    {
+        var r = NovoRoteador().Route(
+            new TaskDescriptor(TaskKind.Chat),
+            new RoutingPreferences(
+                PinnedModelId: "gpt-4o",
+                AvailableProviders: Apenas(AiProvider.Claude)));
+
+        Assert.False(r.Success);
+        Assert.Contains("nao ha chave de API cadastrada", r.Reason);
+    }
+
+    [Fact]
+    public void Sem_restricao_de_provedor_todos_continuam_valendo()
+    {
+        // Compatibilidade: preferencias sem a lista (ou vazia) nao filtram nada.
+        var r = NovoRoteador().Route(
+            new TaskDescriptor(TaskKind.Chat), RoutingPreferences.Default);
+
+        Assert.True(r.Success);
+    }
 }

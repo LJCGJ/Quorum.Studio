@@ -38,6 +38,10 @@ public sealed class ModelRouter
                 return RoutingResult.Fail(
                     $"O modelo fixado '{prefs.PinnedModelId}' nao esta na lista atual. " +
                     "Ele pode ter sido aposentado — atualize a lista de modelos.");
+            if (!prefs.IsUsable(pinned.Provider))
+                return RoutingResult.Fail(
+                    $"O modelo fixado '{pinned.Id}' e do provedor {pinned.Provider}, mas " +
+                    "nao ha chave de API cadastrada para ele.");
             if (task.NeedsTools && !pinned.SupportsTools)
                 return RoutingResult.Fail(
                     $"O modelo fixado '{pinned.Id}' nao suporta ferramentas, mas esta " +
@@ -52,9 +56,14 @@ public sealed class ModelRouter
         }
 
         // 2. Requisitos obrigatorios
-        var candidates = _registry.All.Where(m => AttendsHardRequirements(m, task)).ToList();
+        var candidates = _registry.All.Where(m => AttendsHardRequirements(m, task, prefs)).ToList();
         if (candidates.Count == 0)
         {
+            if (prefs.AvailableProviders is { Count: 0 })
+                return RoutingResult.Fail(
+                    "Nenhuma chave de API cadastrada. Adicione uma em Configuracoes " +
+                    "para o Quorum poder escolher um modelo.");
+
             var motivo = task.NeedsTools
                 ? "Nenhum modelo disponivel suporta ferramentas (necessario para automacao). "
                 : "Nenhum modelo disponivel atende aos requisitos da tarefa. ";
@@ -100,7 +109,7 @@ public sealed class ModelRouter
 
         var targetTier = TargetTierFor(task);
         return _registry.All
-            .Where(m => AttendsHardRequirements(m, task))
+            .Where(m => AttendsHardRequirements(m, task, prefs))
             .OrderBy(m => TierDistance(m.Tier, targetTier, prefs.EconomyMode))
             .ThenByDescending(m => prefs.PreferredProvider.HasValue &&
                                    m.Provider == prefs.PreferredProvider.Value)
@@ -109,8 +118,11 @@ public sealed class ModelRouter
             .ToList();
     }
 
-    private static bool AttendsHardRequirements(ModelInfo m, TaskDescriptor task)
+    private static bool AttendsHardRequirements(
+        ModelInfo m, TaskDescriptor task, RoutingPreferences prefs)
     {
+        // Sem chave para o provedor, o modelo nao e uma opcao real.
+        if (!prefs.IsUsable(m.Provider)) return false;
         if (task.NeedsTools && !m.SupportsTools) return false;
         if (task.EstimatedContextTokens > 0 && m.ContextWindow < task.EstimatedContextTokens)
             return false;
