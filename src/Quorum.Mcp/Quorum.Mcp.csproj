@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- TargetFramework, Nullable etc. vem do Directory.Build.props -->
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" Version="1.4.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Quorum.Core\Quorum.Core.csproj" />
+    <ProjectReference Include="..\Quorum.Agents\Quorum.Agents.csproj" />
+  </ItemGroup>
+</Project>

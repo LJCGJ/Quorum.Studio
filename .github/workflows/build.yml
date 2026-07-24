@@ -31,3 +31,7 @@ jobs:
 
       - name: Testes
         run: dotnet test --no-build --configuration Release --verbosity normal
+
+# Nota: Quorum.App e uma aplicacao de janela (WinExe). O CI compila o projeto nos
+# tres sistemas e roda a suite de testes, mas nao executa a interface — nao ha
+# display nos runners. A verificacao visual e feita localmente.
