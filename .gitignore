@@ -488,3 +488,4 @@ $RECYCLE.BIN/
 # saidas do gerador de instalador
 installer/publish/
 installer/windows/saida/
+installer/portateis/

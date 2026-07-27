@@ -64,9 +64,9 @@ automacoes que usam MCP, [Node.js 18+](https://nodejs.org).
 
 | Sistema | Versoes |
 |---|---|
-| **Windows** | 10 (build 1607+) e 11 — x64 |
-| **Linux** | Ubuntu 20.04+, Debian 11+, Fedora, openSUSE 15+, RHEL 8+ — com ambiente grafico (X11/Wayland) |
-| **macOS** | 12 Monterey ou superior — Intel e Apple Silicon |
+| **Windows** | 10 (build 1607+) e 11 — x64 e ARM64 (no Windows 11 ARM a versao x64 tambem roda, por emulacao) |
+| **Linux** | Ubuntu 20.04+, Debian 11+, Fedora, openSUSE 15+, RHEL 8+ — x64 e arm64 (ex.: Raspberry Pi 4+), com ambiente grafico (X11/Wayland) |
+| **macOS** | 12 Monterey ou superior — Intel (x64) e Apple Silicon (arm64 nativo) |
 
 Os limites vem do .NET 8, que o aplicativo carrega embutido no instalador. Sistemas
 anteriores (Windows XP/7/8, macOS Lion a Big Sur) nao conseguem executar o runtime.
