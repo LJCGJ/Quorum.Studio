@@ -482,3 +482,7 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# saidas do gerador de instalador
+installer/publish/
+installer/windows/saida/
