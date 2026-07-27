@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="quorum_logo_escuro.png" alt="Quorum" width="440">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="quorum_logo_escuro.png">
+    <img src="quorum_logo_claro.png" alt="Quorum" width="440">
+  </picture>
 </p>
 
 <p align="center"><b>QA · AI Test Automation</b></p>
@@ -56,6 +59,17 @@ o resultado da primeira.
 
 Requisitos: [.NET 8 SDK](https://dotnet.microsoft.com/download) (ou superior) e, para as
 automacoes que usam MCP, [Node.js 18+](https://nodejs.org).
+
+### Sistemas suportados
+
+| Sistema | Versoes |
+|---|---|
+| **Windows** | 10 (build 1607+) e 11 — x64 |
+| **Linux** | Ubuntu 20.04+, Debian 11+, Fedora, openSUSE 15+, RHEL 8+ — com ambiente grafico (X11/Wayland) |
+| **macOS** | 12 Monterey ou superior — Intel e Apple Silicon |
+
+Os limites vem do .NET 8, que o aplicativo carrega embutido no instalador. Sistemas
+anteriores (Windows XP/7/8, macOS Lion a Big Sur) nao conseguem executar o runtime.
 
 ```bash
 git clone https://github.com/LJCGJ/Quorum.Studio.git
