@@ -1,0 +1,149 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Quorum.App.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="880" d:DesignHeight="600"
+             x:Class="Quorum.App.Views.ModelsView"
+             x:DataType="vm:ModelsViewModel">
+
+  <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+
+    <!-- ===== BARRA DE ACAO: atualizar e escolha atual ===== -->
+    <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*">
+      <Button Grid.Column="0" Classes="ghost" MinWidth="210"
+              IsEnabled="{Binding !IsRefreshing}"
+              Command="{Binding RefreshCommand}">
+        <TextBlock Text="Atualizar lista no provedor"/>
+      </Button>
+
+      <Button Grid.Column="1" Classes="ghost" Margin="10,0,0,0"
+              IsVisible="{Binding IsPinned}"
+              Command="{Binding UseAutomaticCommand}">
+        <TextBlock Text="Voltar ao automatico"/>
+      </Button>
+
+      <Border Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center"
+              Background="{DynamicResource ChipBackground}"
+              CornerRadius="{StaticResource RadiusPill}" Padding="14,6">
+        <TextBlock Text="{Binding SelectionLabel}"
+                   FontSize="{StaticResource FontSizeCaption}"
+                   Foreground="{StaticResource AccentEmeraldBrush}"/>
+      </Border>
+    </Grid>
+
+    <!-- ===== MENSAGEM ===== -->
+    <TextBlock Grid.Row="1" Text="{Binding Message}" TextWrapping="Wrap"
+               FontSize="{StaticResource FontSizeCaption}"
+               Foreground="{DynamicResource MutedBrush}"/>
+
+    <!-- ===== CATALOGO ===== -->
+    <Border Grid.Row="2" Background="{DynamicResource SurfaceBackground}"
+            BorderBrush="{DynamicResource LineBrush}" BorderThickness="1"
+            CornerRadius="{StaticResource RadiusCard}">
+      <Panel>
+        <!-- Sem chave, a lista e so o catalogo de partida: a tela diz isso -->
+        <StackPanel IsVisible="{Binding !HasKeys}" Spacing="10" MaxWidth="420"
+                    VerticalAlignment="Center" HorizontalAlignment="Center">
+          <TextBlock Text="Cadastre uma chave para comecar" HorizontalAlignment="Center"
+                     FontSize="{StaticResource FontSizeTitle}" FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextBrush}"/>
+          <TextBlock TextWrapping="Wrap" TextAlignment="Center"
+                     FontSize="{StaticResource FontSizeCaption}"
+                     Foreground="{DynamicResource MutedBrush}"
+                     Text="A lista abaixo e um ponto de partida. Com uma chave cadastrada em Configuracoes, o Quorum busca os modelos que o provedor oferece hoje — e passa a so oferecer os que voce pode usar."/>
+        </StackPanel>
+
+        <ScrollViewer Padding="14,12" IsVisible="{Binding HasKeys}">
+          <ItemsControl ItemsSource="{Binding Models}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="vm:ModelRow">
+                <Border Background="{DynamicResource ChipBackground}"
+                        BorderBrush="{DynamicResource LineBrush}" BorderThickness="1"
+                        CornerRadius="{StaticResource RadiusControl}"
+                        Padding="14,10" Margin="0,0,0,8">
+                  <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="14">
+
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextBrush}"/>
+                        <Border IsVisible="{Binding IsPinned}"
+                                Background="{StaticResource AccentEmeraldBrush}"
+                                CornerRadius="{StaticResource RadiusPill}" Padding="8,1">
+                          <TextBlock Text="em uso" FontSize="10" Foreground="#06281B"/>
+                        </Border>
+                      </StackPanel>
+                      <TextBlock Text="{Binding Provider}"
+                                 FontSize="{StaticResource FontSizeCaption}"
+                                 Foreground="{DynamicResource MutedBrush}"/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Column="1" Text="{Binding Tier}" VerticalAlignment="Center"
+                               FontSize="{StaticResource FontSizeCaption}" MinWidth="80"
+                               Foreground="{StaticResource AccentCyanBrush}"/>
+                    <TextBlock Grid.Column="2" Text="{Binding Context}" VerticalAlignment="Center"
+                               FontSize="{StaticResource FontSizeCaption}" MinWidth="46"
+                               Foreground="{DynamicResource MutedBrush}"/>
+                    <TextBlock Grid.Column="3" Text="{Binding Cost}" VerticalAlignment="Center"
+                               FontSize="{StaticResource FontSizeCaption}" MinWidth="96"
+                               Foreground="{DynamicResource MutedBrush}"/>
+                    <TextBlock Grid.Column="4" Text="{Binding Availability}" VerticalAlignment="Center"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{StaticResource AccentAmberBrush}"/>
+
+                    <Button Grid.Column="5" Classes="ghost" Padding="12,5"
+                            IsVisible="{Binding CanUse}"
+                            Command="{Binding $parent[ItemsControl].((vm:ModelsViewModel)DataContext).UseCommand}"
+                            CommandParameter="{Binding}">
+                      <TextBlock Text="Usar este" FontSize="{StaticResource FontSizeCaption}"/>
+                    </Button>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Panel>
+    </Border>
+
+    <!-- ===== SIMULADOR (recolhido: e apoio, nao o assunto principal) ===== -->
+    <Expander Grid.Row="3" IsExpanded="False">
+      <Expander.Header>
+        <TextBlock Text="Simular: quem responderia cada tipo de tarefa?"
+                   FontSize="{StaticResource FontSizeCaption}"/>
+      </Expander.Header>
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="20" Margin="0,10,0,0">
+        <StackPanel Grid.Column="0" Spacing="6">
+          <TextBlock Text="Tipo de tarefa" FontSize="{StaticResource FontSizeCaption}"
+                     Foreground="{DynamicResource MutedBrush}"/>
+          <ComboBox ItemsSource="{Binding TaskKinds}" SelectedItem="{Binding SelectedTaskKind}"
+                    MinWidth="160"/>
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+          <TextBlock Text="{Binding Decision}" FontWeight="SemiBold"
+                     Foreground="{StaticResource AccentEmeraldBrush}"/>
+          <TextBlock Text="{Binding DecisionReason}" TextWrapping="Wrap"
+                     FontSize="{StaticResource FontSizeCaption}"
+                     Foreground="{DynamicResource MutedBrush}"/>
+          <ItemsControl ItemsSource="{Binding FallbackChain}" Margin="0,4,0,0">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Background="{DynamicResource ChipBackground}"
+                        CornerRadius="{StaticResource RadiusPill}"
+                        Padding="10,3" Margin="0,0,6,6">
+                  <TextBlock Text="{Binding}" FontSize="{StaticResource FontSizeCaption}"
+                             Foreground="{DynamicResource MutedBrush}"/>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Grid>
+    </Expander>
+  </Grid>
+</UserControl>

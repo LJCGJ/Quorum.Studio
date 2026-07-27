@@ -1,0 +1,100 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Quorum.App.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="820" d:DesignHeight="560"
+             x:Class="Quorum.App.Views.ChatView"
+             x:DataType="vm:ChatViewModel">
+
+  <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="12">
+
+    <!-- Aviso de chave ausente: uma tela vazia e um convite a agir -->
+    <Border Grid.Row="0" IsVisible="{Binding NeedsApiKey}"
+            Background="{DynamicResource NoticeBackground}"
+            BorderBrush="{StaticResource AccentAmberBrush}" BorderThickness="1,1,1,1"
+            CornerRadius="{StaticResource RadiusCard}" Padding="16,12">
+      <StackPanel Spacing="3">
+        <TextBlock Text="Informe uma chave de API para comecar"
+                   FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+        <TextBlock Text="Abra Configuracoes e cole a chave do Claude, OpenAI ou Gemini. O Quorum reconhece o provedor pelo formato da chave."
+                   TextWrapping="Wrap" FontSize="{StaticResource FontSizeCaption}"
+                   Foreground="{DynamicResource MutedBrush}"/>
+      </StackPanel>
+    </Border>
+
+    <!-- Conversa -->
+    <Border Grid.Row="1" Background="{DynamicResource SurfaceBackground}"
+            BorderBrush="{DynamicResource LineBrush}" BorderThickness="1"
+            CornerRadius="{StaticResource RadiusCard}">
+      <Panel>
+        <!-- Estado inicial: a tela vazia diz o que fazer com ela -->
+        <StackPanel IsVisible="{Binding !Messages.Count}" Spacing="10"
+                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                    MaxWidth="420">
+          <TextBlock Text="Comece descrevendo o teste"
+                     HorizontalAlignment="Center" FontSize="{StaticResource FontSizeTitle}"
+                     FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+          <TextBlock TextWrapping="Wrap" TextAlignment="Center"
+                     FontSize="{StaticResource FontSizeCaption}"
+                     Foreground="{DynamicResource MutedBrush}"
+                     Text="Por exemplo: &quot;monte um plano de testes para a tela de login&quot; ou &quot;quais casos de borda faltam no meu cadastro?&quot;. Para cada mensagem, o roteador escolhe o modelo mais adequado."/>
+        </StackPanel>
+
+        <ScrollViewer Padding="18,16">
+          <ItemsControl ItemsSource="{Binding Messages}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="vm:ChatEntry">
+                <StackPanel Margin="0,0,0,16" Spacing="4">
+                  <TextBlock Text="{Binding Author}" FontWeight="SemiBold"
+                             FontSize="{StaticResource FontSizeCaption}"
+                             Foreground="{StaticResource AccentCyanBrush}"/>
+                  <TextBlock Text="{Binding Text}" TextWrapping="Wrap"
+                             FontSize="{StaticResource FontSizeBody}"
+                             Foreground="{DynamicResource TextBrush}"/>
+                  <TextBlock Text="{Binding Meta}" IsVisible="{Binding HasMeta}"
+                             FontSize="{StaticResource FontSizeCaption}"
+                             Foreground="{DynamicResource MutedBrush}"/>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Panel>
+    </Border>
+
+    <!-- Estado + quem responde -->
+    <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
+      <TextBlock Grid.Column="0" Text="{Binding StatusMessage}"
+                 FontSize="{StaticResource FontSizeCaption}" FontStyle="Italic"
+                 Foreground="{StaticResource AccentEmeraldBrush}"
+                 VerticalAlignment="Center"/>
+      <Border Grid.Column="1" Background="{DynamicResource ChipBackground}"
+              CornerRadius="{StaticResource RadiusPill}" Padding="12,5">
+        <TextBlock Text="{Binding RoutingLabel}"
+                   FontSize="{StaticResource FontSizeCaption}"
+                   Foreground="{DynamicResource MutedBrush}"/>
+      </Border>
+    </Grid>
+
+    <!-- Entrada -->
+    <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+      <TextBox Grid.Column="0" Text="{Binding Input}" AcceptsReturn="True"
+               Height="76" TextWrapping="Wrap"
+               Watermark="Descreva o que quer testar..."
+               CornerRadius="{StaticResource RadiusControl}"/>
+      <Button Grid.Column="1" Classes="primary" Width="112" Height="76"
+              Command="{Binding SendCommand}" IsVisible="{Binding !IsBusy}">
+        <TextBlock Text="Enviar"/>
+      </Button>
+      <Button Grid.Column="1" Classes="danger" Width="112" Height="76"
+              Command="{Binding StopCommand}" IsVisible="{Binding IsBusy}">
+        <TextBlock Text="Parar"/>
+      </Button>
+      <Button Grid.Column="2" Classes="ghost" Width="96" Height="76"
+              Command="{Binding ClearCommand}">
+        <TextBlock Text="Limpar"/>
+      </Button>
+    </Grid>
+  </Grid>
+</UserControl>

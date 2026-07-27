@@ -424,7 +424,9 @@ test-results/
 
 # Mac bundle stuff
 *.dmg
-*.app
+# (removido: '*.app' — no Windows/macOS o git ignora sem diferenciar maiusculas,
+# e a regra engolia a pasta src/Quorum.App inteira; foi o que deixou a interface
+# fora do repositorio e derrubou o CI nos tres sistemas)
 
 # content below from: https://github.com/github/gitignore/blob/master/Global/macOS.gitignore
 # General

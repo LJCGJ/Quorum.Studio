@@ -1,0 +1,112 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Quorum.App.ViewModels"
+        xmlns:views="using:Quorum.App.Views"
+        mc:Ignorable="d" d:DesignWidth="1120" d:DesignHeight="720"
+        x:Class="Quorum.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Quorum — QA · AI Test Automation"
+        Icon="avares://Quorum.App/Assets/quorum.ico"
+        Width="1120" Height="720"
+        MinWidth="880" MinHeight="560"
+        FontFamily="{StaticResource FontUi}"
+        Background="{DynamicResource AppBackground}">
+
+  <Window.Resources>
+    <!-- Escudo da marca, em vetor: mesma forma do icone, sem depender de arquivo -->
+    <StreamGeometry x:Key="ShieldPath">M 256 88 L 400 146 V 270 C 400 350 334 408 256 432 C 178 408 112 350 112 270 V 146 Z</StreamGeometry>
+    <StreamGeometry x:Key="ShieldLeftPath">M 212 222 L 172 262 L 212 302</StreamGeometry>
+    <StreamGeometry x:Key="ShieldRightPath">M 300 222 L 340 262 L 300 302</StreamGeometry>
+    <StreamGeometry x:Key="ShieldBarPath">M 270 206 L 242 318</StreamGeometry>
+  </Window.Resources>
+
+  <Grid ColumnDefinitions="228,*">
+
+    <!-- ================= NAVEGACAO ================= -->
+    <Border Grid.Column="0" Background="{DynamicResource SidebarBackground}"
+            BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,1,0">
+      <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Marca -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="20,22,20,26" Spacing="12">
+          <!-- Viewbox escala o desenho de 512x512 para o tamanho final, sem
+               transform manual (que deslocaria o traco pelo centro). -->
+          <Viewbox Width="32" Height="32" VerticalAlignment="Center">
+            <Canvas Width="512" Height="512">
+              <Path Data="{StaticResource ShieldPath}" Stroke="{StaticResource AccentCyanBrush}"
+                    StrokeThickness="28" StrokeLineCap="Round" StrokeJoin="Round"/>
+              <Path Data="{StaticResource ShieldLeftPath}" Stroke="{DynamicResource TextBrush}"
+                    StrokeThickness="26" StrokeLineCap="Round" StrokeJoin="Round"/>
+              <Path Data="{StaticResource ShieldRightPath}" Stroke="{DynamicResource TextBrush}"
+                    StrokeThickness="26" StrokeLineCap="Round" StrokeJoin="Round"/>
+              <Path Data="{StaticResource ShieldBarPath}" Stroke="{StaticResource AccentEmeraldBrush}"
+                    StrokeThickness="26" StrokeLineCap="Round"/>
+            </Canvas>
+          </Viewbox>
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="Quorum" FontSize="19" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextBrush}"/>
+            <TextBlock Text="QA · AI TEST AUTOMATION" FontSize="8.5" LetterSpacing="1.1"
+                       Foreground="{StaticResource AccentCyanBrush}"/>
+          </StackPanel>
+        </StackPanel>
+
+        <!-- Itens -->
+        <ItemsControl Grid.Row="1" ItemsSource="{Binding Pages}" Margin="12,0">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="vm:ViewModelBase">
+              <Button Classes="nav"
+                      Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).NavigateCommand}"
+                      CommandParameter="{Binding}"
+                      HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Left">
+                <TextBlock Text="{Binding Title}"/>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Tema -->
+        <Button Grid.Row="2" Classes="ghost" Margin="16,0,16,18"
+                HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                Command="{Binding ToggleThemeCommand}">
+          <TextBlock Text="Alternar tema"/>
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- ================= CONTEUDO ================= -->
+    <Grid Grid.Column="1" RowDefinitions="Auto,*">
+
+      <!-- Cabecalho da pagina -->
+      <StackPanel Grid.Row="0" Margin="28,24,28,14">
+        <TextBlock Text="{Binding CurrentPage.Title}"
+                   FontSize="{StaticResource FontSizeDisplay}" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextBrush}"/>
+        <TextBlock Text="{Binding CurrentPage.Subtitle}" Margin="0,4,0,0"
+                   FontSize="{StaticResource FontSizeBody}"
+                   Foreground="{DynamicResource MutedBrush}"/>
+      </StackPanel>
+
+      <!-- Pagina atual -->
+      <ContentControl Grid.Row="1" Content="{Binding CurrentPage}" Margin="28,0,28,24">
+        <ContentControl.DataTemplates>
+          <DataTemplate DataType="vm:ChatViewModel">
+            <views:ChatView/>
+          </DataTemplate>
+          <DataTemplate DataType="vm:AutomationViewModel">
+            <views:AutomationView/>
+          </DataTemplate>
+          <DataTemplate DataType="vm:ModelsViewModel">
+            <views:ModelsView/>
+          </DataTemplate>
+          <DataTemplate DataType="vm:SettingsViewModel">
+            <views:SettingsView/>
+          </DataTemplate>
+        </ContentControl.DataTemplates>
+      </ContentControl>
+    </Grid>
+  </Grid>
+</Window>

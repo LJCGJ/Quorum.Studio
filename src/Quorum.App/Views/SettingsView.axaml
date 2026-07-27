@@ -1,0 +1,105 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Quorum.App.ViewModels"
+             xmlns:svc="using:Quorum.App.Services"
+             mc:Ignorable="d" d:DesignWidth="820" d:DesignHeight="560"
+             x:Class="Quorum.App.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+  <ScrollViewer>
+    <StackPanel Spacing="18" MaxWidth="660" HorizontalAlignment="Left">
+
+      <!-- ============ CHAVES ============ -->
+      <Border Background="{DynamicResource SurfaceBackground}"
+              BorderBrush="{DynamicResource LineBrush}" BorderThickness="1"
+              CornerRadius="{StaticResource RadiusCard}" Padding="18,16">
+        <StackPanel Spacing="12">
+          <TextBlock Text="Chaves de API" FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextBrush}"/>
+          <TextBlock TextWrapping="Wrap" FontSize="{StaticResource FontSizeCaption}"
+                     Foreground="{DynamicResource MutedBrush}"
+                     Text="Cadastre uma chave por provedor. Com mais de uma, o Quorum pode atender tarefas simultaneas com IAs diferentes — e so oferece modelos dos provedores que voce cadastrou. As chaves ficam apenas na memoria desta sessao."/>
+
+          <!-- Adicionar -->
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <TextBox Grid.Column="0" Text="{Binding NewKey}" PasswordChar="•"
+                     Watermark="sk-ant-... · sk-... · AIza..."
+                     CornerRadius="{StaticResource RadiusControl}"/>
+            <Button Grid.Column="1" Classes="primary" Width="130"
+                    Command="{Binding AddKeyCommand}">
+              <TextBlock Text="Adicionar"/>
+            </Button>
+          </Grid>
+
+          <TextBlock Text="{Binding ProviderLabel}" IsVisible="{Binding HasProviderLabel}"
+                     FontSize="{StaticResource FontSizeCaption}"
+                     Foreground="{StaticResource AccentCyanBrush}"/>
+
+          <!-- Cadastradas -->
+          <ItemsControl ItemsSource="{Binding Keys}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="svc:ApiKeyEntry">
+                <Border Background="{DynamicResource ChipBackground}"
+                        CornerRadius="{StaticResource RadiusControl}"
+                        Padding="12,8" Margin="0,0,0,6">
+                  <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                    <Border Grid.Column="0" Background="{StaticResource AccentEmeraldBrush}"
+                            Width="7" Height="7" CornerRadius="4"
+                            VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Display}"
+                               VerticalAlignment="Center"
+                               FontSize="{StaticResource FontSizeBody}"
+                               Foreground="{DynamicResource TextBrush}"/>
+                    <Button Grid.Column="2" Classes="ghost" Padding="10,4"
+                            Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).RemoveKeyCommand}"
+                            CommandParameter="{Binding}">
+                      <TextBlock Text="Remover" FontSize="{StaticResource FontSizeCaption}"/>
+                    </Button>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <!-- Lembrar entre execucoes: escolha do usuario, com o nivel real de
+               protecao dito com todas as letras. -->
+          <CheckBox IsChecked="{Binding RememberKeys}"
+                    Content="Lembrar as chaves neste computador"/>
+          <TextBlock Text="{Binding VaultExplanation}" TextWrapping="Wrap"
+                     Margin="26,-6,0,0"
+                     FontSize="{StaticResource FontSizeCaption}"
+                     Foreground="{DynamicResource MutedBrush}"/>
+
+          <TextBlock IsVisible="{Binding !HasKeys}" TextWrapping="Wrap"
+                     FontSize="{StaticResource FontSizeCaption}"
+                     Foreground="{DynamicResource MutedBrush}"
+                     Text="Nenhuma chave cadastrada ainda. Sem ela, o Quorum nao tem modelos para oferecer."/>
+        </StackPanel>
+      </Border>
+
+      <!-- ============ CUSTO ============ -->
+      <Border Background="{DynamicResource SurfaceBackground}"
+              BorderBrush="{DynamicResource LineBrush}" BorderThickness="1"
+              CornerRadius="{StaticResource RadiusCard}" Padding="18,16">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Custo e escolha de modelo" FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextBrush}"/>
+
+          <CheckBox IsChecked="{Binding EconomyMode}" Content="Priorizar economia"/>
+          <TextBlock TextWrapping="Wrap" FontSize="{StaticResource FontSizeCaption}"
+                     Foreground="{DynamicResource MutedBrush}" Margin="26,-6,0,0"
+                     Text="Escolhe sempre o modelo mais barato que atende a tarefa, mesmo quando um mais capaz caberia."/>
+
+          <TextBlock TextWrapping="Wrap" FontSize="{StaticResource FontSizeCaption}"
+                     Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,0"
+                     Text="Para escolher um modelo especifico ou atualizar a lista direto no provedor, use a tela Modelos."/>
+        </StackPanel>
+      </Border>
+
+      <TextBlock Text="{Binding Message}" FontSize="{StaticResource FontSizeCaption}"
+                 Foreground="{StaticResource AccentEmeraldBrush}"/>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

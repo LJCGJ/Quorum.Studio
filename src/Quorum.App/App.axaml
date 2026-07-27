@@ -1,0 +1,94 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Quorum.App.App"
+             RequestedThemeVariant="Dark">
+
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://Quorum.App/Styles/Tokens.axaml"/>
+      </ResourceDictionary.MergedDictionaries>
+
+      <!-- Cores que trocam com o tema. O escuro e o padrao: a marca do Quorum
+           nasceu sobre navy, e e nele que o escudo tem mais presenca. -->
+      <ResourceDictionary.ThemeDictionaries>
+
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="AppBackground" Color="{StaticResource NavyDeep}"/>
+          <SolidColorBrush x:Key="SidebarBackground" Color="{StaticResource NavySurface}"/>
+          <SolidColorBrush x:Key="SurfaceBackground" Color="{StaticResource NavySurface}"/>
+          <SolidColorBrush x:Key="ChipBackground" Color="{StaticResource NavyRaised}"/>
+          <SolidColorBrush x:Key="NoticeBackground" Color="{StaticResource NavyRaised}"/>
+          <SolidColorBrush x:Key="LineBrush" Color="{StaticResource NavyLine}"/>
+          <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextOnDark}"/>
+          <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource TextOnDarkMuted}"/>
+        </ResourceDictionary>
+
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="AppBackground" Color="{StaticResource PaperBase}"/>
+          <SolidColorBrush x:Key="SidebarBackground" Color="{StaticResource PaperSurface}"/>
+          <SolidColorBrush x:Key="SurfaceBackground" Color="{StaticResource PaperSurface}"/>
+          <SolidColorBrush x:Key="ChipBackground" Color="{StaticResource PaperBase}"/>
+          <SolidColorBrush x:Key="NoticeBackground" Color="#FEF9EC"/>
+          <SolidColorBrush x:Key="LineBrush" Color="{StaticResource PaperLine}"/>
+          <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextOnLight}"/>
+          <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource TextOnLightMuted}"/>
+        </ResourceDictionary>
+
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme/>
+    <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+
+    <!-- Botao de navegacao: discreto, alinhado a esquerda -->
+    <Style Selector="Button.nav">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+      <Setter Property="Padding" Value="14,10"/>
+      <Setter Property="Margin" Value="0,2"/>
+      <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}"/>
+      <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+    </Style>
+    <Style Selector="Button.nav:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource ChipBackground}"/>
+      <Setter Property="TextBlock.Foreground" Value="{DynamicResource TextBrush}"/>
+    </Style>
+
+    <!-- Acao principal: a unica cor cheia da tela, para nao competir -->
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="{StaticResource AccentEmeraldBrush}"/>
+      <Setter Property="Foreground" Value="#06281B"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="Button.danger">
+      <Setter Property="Background" Value="#E5484D"/>
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="Button.ghost">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}"/>
+      <Setter Property="Padding" Value="14,9"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="TextBlock">
+      <Setter Property="FontFamily" Value="{StaticResource FontUi}"/>
+    </Style>
+  </Application.Styles>
+</Application>

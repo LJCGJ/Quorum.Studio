@@ -1,0 +1,267 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Quorum.App.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
+             x:Class="Quorum.App.Views.AutomationView"
+             x:DataType="vm:AutomationViewModel">
+
+  <Grid ColumnDefinitions="320,*" ColumnSpacing="18">
+
+    <!-- ================= DISPARAR ================= -->
+    <Border Grid.Column="0" Background="{DynamicResource SurfaceBackground}"
+            BorderBrush="{DynamicResource LineBrush}" BorderThickness="1"
+            CornerRadius="{StaticResource RadiusCard}" Padding="18,16"
+            VerticalAlignment="Top">
+      <StackPanel Spacing="12">
+
+        <TextBlock Text="Nova tarefa" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextBrush}"/>
+
+        <StackPanel Spacing="5">
+          <TextBlock Text="Tipo" FontSize="{StaticResource FontSizeCaption}"
+                     Foreground="{DynamicResource MutedBrush}"/>
+          <ComboBox ItemsSource="{Binding Kinds}" SelectedItem="{Binding SelectedKind}"
+                    HorizontalAlignment="Stretch"/>
+          <TextBlock Text="{Binding CostWarning}" TextWrapping="Wrap"
+                     FontSize="{StaticResource FontSizeCaption}"
+                     Foreground="{DynamicResource MutedBrush}"/>
+        </StackPanel>
+
+        <StackPanel Spacing="5">
+          <TextBlock Text="{Binding TargetLabel}" FontSize="{StaticResource FontSizeCaption}"
+                     Foreground="{DynamicResource MutedBrush}"/>
+          <TextBox Text="{Binding Target}" Watermark="{Binding TargetHint}"
+                   CornerRadius="{StaticResource RadiusControl}"/>
+        </StackPanel>
+
+        <CheckBox IsChecked="{Binding ReadOnly}" IsVisible="{Binding ShowReadOnly}"
+                  Content="Somente leitura (recomendado)"/>
+        <CheckBox IsChecked="{Binding Headless}" IsVisible="{Binding ShowHeadless}"
+                  Content="Sem janela do navegador"/>
+
+        <!-- O duplo processamento, visivel desde o disparo: opcional e por tarefa -->
+        <StackPanel Spacing="2">
+          <CheckBox IsChecked="{Binding ReviewAfter}"
+                    Content="Revisar com outra IA ao concluir"/>
+          <TextBlock TextWrapping="Wrap" Margin="26,0,0,0"
+                     FontSize="{StaticResource FontSizeCaption}"
+                     Foreground="{StaticResource AccentAmberBrush}"
+                     Text="Opcional. Uma segunda IA (de outro provedor, quando houver) le e critica o relatorio — consome tokens adicionais."/>
+        </StackPanel>
+
+        <StackPanel Spacing="5">
+          <TextBlock Text="O que testar" FontSize="{StaticResource FontSizeCaption}"
+                     Foreground="{DynamicResource MutedBrush}"/>
+          <TextBox Text="{Binding Objective}" AcceptsReturn="True" Height="92"
+                   TextWrapping="Wrap"
+                   Watermark="Ex.: entre com um usuario invalido e verifique a mensagem de erro"
+                   CornerRadius="{StaticResource RadiusControl}"/>
+        </StackPanel>
+
+        <Button Classes="primary" Command="{Binding StartCommand}"
+                HorizontalAlignment="Stretch" Height="38">
+          <TextBlock Text="Disparar tarefa"/>
+        </Button>
+
+        <Border IsVisible="{Binding HasNotice}"
+                Background="{DynamicResource NoticeBackground}"
+                BorderBrush="{StaticResource AccentAmberBrush}" BorderThickness="1"
+                CornerRadius="{StaticResource RadiusControl}" Padding="12,9">
+          <TextBlock Text="{Binding Notice}" TextWrapping="Wrap"
+                     FontSize="{StaticResource FontSizeCaption}"
+                     Foreground="{DynamicResource TextBrush}"/>
+        </Border>
+
+        <TextBlock Text="{Binding ConcurrencyInfo}" TextWrapping="Wrap"
+                   FontSize="{StaticResource FontSizeCaption}"
+                   Foreground="{DynamicResource MutedBrush}"/>
+      </StackPanel>
+    </Border>
+
+    <!-- ================= TAREFAS ================= -->
+    <Grid Grid.Column="1" RowDefinitions="Auto,*" RowSpacing="10">
+
+      <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10"
+                  HorizontalAlignment="Right">
+        <Button Classes="ghost" Command="{Binding StopAllCommand}">
+          <TextBlock Text="Parar todas"/>
+        </Button>
+        <Button Classes="ghost" Command="{Binding ClearFinishedCommand}">
+          <TextBlock Text="Limpar encerradas"/>
+        </Button>
+      </StackPanel>
+
+      <Border Grid.Row="1" Background="{DynamicResource SurfaceBackground}"
+              BorderBrush="{DynamicResource LineBrush}" BorderThickness="1"
+              CornerRadius="{StaticResource RadiusCard}">
+        <Panel>
+          <!-- Nada rodando ainda: a tela explica o que vai aparecer aqui -->
+          <StackPanel IsVisible="{Binding !Cards.Count}" Spacing="10" MaxWidth="380"
+                      VerticalAlignment="Center" HorizontalAlignment="Center">
+            <TextBlock Text="Nenhuma tarefa em andamento" HorizontalAlignment="Center"
+                       FontSize="{StaticResource FontSizeTitle}" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextBrush}"/>
+            <TextBlock TextWrapping="Wrap" TextAlignment="Center"
+                       FontSize="{StaticResource FontSizeCaption}"
+                       Foreground="{DynamicResource MutedBrush}"
+                       Text="Preencha o formulario ao lado para disparar a primeira. Cada tarefa aparece aqui com seu progresso ao vivo, o modelo que a atende e quanto consumiu — e voce pode parar qualquer uma sem afetar as outras."/>
+          </StackPanel>
+
+          <ScrollViewer Padding="16">
+            <ItemsControl ItemsSource="{Binding Cards}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="vm:SessionCardViewModel">
+
+                  <Border Background="{DynamicResource ChipBackground}"
+                          BorderBrush="{DynamicResource LineBrush}" BorderThickness="1"
+                          CornerRadius="{StaticResource RadiusCard}"
+                          Padding="16,14" Margin="0,0,0,12">
+                    <StackPanel Spacing="10">
+
+                      <!-- Cabecalho: titulo, estado e acao -->
+                      <Grid ColumnDefinitions="*,Auto,Auto">
+                        <StackPanel Grid.Column="0" Spacing="2">
+                          <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
+                                     Foreground="{DynamicResource TextBrush}"/>
+                          <TextBlock Text="{Binding Objective}" TextWrapping="Wrap"
+                                     MaxLines="2" TextTrimming="CharacterEllipsis"
+                                     FontSize="{StaticResource FontSizeCaption}"
+                                     Foreground="{DynamicResource MutedBrush}"/>
+                        </StackPanel>
+
+                        <Border Grid.Column="1" VerticalAlignment="Top" Margin="10,0"
+                                Background="{DynamicResource SurfaceBackground}"
+                                BorderBrush="{Binding StatusBrush}" BorderThickness="1"
+                                CornerRadius="{StaticResource RadiusPill}" Padding="10,3">
+                          <TextBlock Text="{Binding StatusText}"
+                                     FontSize="{StaticResource FontSizeCaption}"
+                                     FontWeight="SemiBold"
+                                     Foreground="{Binding StatusBrush}"/>
+                        </Border>
+
+                        <Button Grid.Column="2" Classes="danger" VerticalAlignment="Top"
+                                Padding="12,5" IsVisible="{Binding IsActive}"
+                                Command="{Binding StopCommand}">
+                          <TextBlock Text="Parar" FontSize="{StaticResource FontSizeCaption}"/>
+                        </Button>
+                      </Grid>
+
+                      <!-- Medidores: modelo, tempo e consumo -->
+                      <WrapPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding ModelText}" Margin="0,0,16,0"
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   Foreground="{StaticResource AccentCyanBrush}"/>
+                        <TextBlock Text="{Binding ElapsedText}" Margin="0,0,16,0"
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   Foreground="{DynamicResource MutedBrush}"/>
+                        <TextBlock Text="{Binding CostText}"
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   Foreground="{DynamicResource MutedBrush}"/>
+                      </WrapPanel>
+
+                      <!-- Progresso ao vivo (mais recente no topo) -->
+                      <Expander IsVisible="{Binding HasProgress}" IsExpanded="{Binding IsActive}">
+                        <Expander.Header>
+                          <TextBlock Text="Progresso" FontSize="{StaticResource FontSizeCaption}"/>
+                        </Expander.Header>
+                        <ScrollViewer MaxHeight="150">
+                          <ItemsControl ItemsSource="{Binding Progress}">
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate>
+                                <TextBlock Text="{Binding}" TextWrapping="Wrap"
+                                           FontFamily="Consolas,monospace"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           Margin="0,1"/>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </ScrollViewer>
+                      </Expander>
+
+                      <!-- Segunda opiniao: OPCIONAL e paga. O botao so aparece
+                           depois do resultado, e o custo vem escrito ao lado. -->
+                      <Border IsVisible="{Binding CanReview}"
+                              Background="{DynamicResource NoticeBackground}"
+                              BorderBrush="{StaticResource AccentIndigoBrush}"
+                              BorderThickness="1"
+                              CornerRadius="{StaticResource RadiusControl}"
+                              Padding="12,9">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                          <Button Grid.Column="0" Classes="ghost" Padding="12,5"
+                                  Command="{Binding ReviewCommand}">
+                            <TextBlock Text="Revisar com outra IA"
+                                       FontSize="{StaticResource FontSizeCaption}"/>
+                          </Button>
+                          <TextBlock Grid.Column="1" Text="{Binding ReviewHint}"
+                                     VerticalAlignment="Center" TextWrapping="Wrap"
+                                     FontSize="{StaticResource FontSizeCaption}"
+                                     Foreground="{StaticResource AccentAmberBrush}"/>
+                        </Grid>
+                      </Border>
+
+                      <!-- Resultado da revisao -->
+                      <Expander IsVisible="{Binding HasReview}" IsExpanded="True">
+                        <Expander.Header>
+                          <TextBlock Text="{Binding ReviewHeader}"
+                                     FontSize="{StaticResource FontSizeCaption}"
+                                     Foreground="{StaticResource AccentIndigoBrush}"/>
+                        </Expander.Header>
+                        <ScrollViewer MaxHeight="240">
+                          <SelectableTextBlock Text="{Binding ReviewText}" TextWrapping="Wrap"
+                                               FontSize="{StaticResource FontSizeBody}"
+                                               Foreground="{DynamicResource TextBrush}"/>
+                        </ScrollViewer>
+                      </Expander>
+
+                      <!-- Levar embora: script e relatorio -->
+                      <StackPanel Orientation="Horizontal" Spacing="10"
+                                  IsVisible="{Binding HasResult}">
+                        <Button Classes="ghost" Padding="12,5"
+                                IsVisible="{Binding HasScript}"
+                                Command="{Binding SaveScriptCommand}">
+                          <StackPanel Orientation="Horizontal" Spacing="7">
+                            <TextBlock Text="Salvar script"
+                                       FontSize="{StaticResource FontSizeCaption}"/>
+                            <TextBlock Text="{Binding ScriptLabel}"
+                                       FontSize="{StaticResource FontSizeCaption}"
+                                       Foreground="{StaticResource AccentEmeraldBrush}"/>
+                          </StackPanel>
+                        </Button>
+
+                        <Button Classes="ghost" Padding="12,5"
+                                Command="{Binding ExportReportCommand}">
+                          <TextBlock Text="Exportar relatorio"
+                                     FontSize="{StaticResource FontSizeCaption}"/>
+                        </Button>
+
+                        <TextBlock Text="{Binding SaveMessage}" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   Foreground="{DynamicResource MutedBrush}"/>
+                      </StackPanel>
+
+                      <!-- Relatorio final -->
+                      <Expander IsVisible="{Binding HasResult}" IsExpanded="True">
+                        <Expander.Header>
+                          <TextBlock Text="Relatorio" FontSize="{StaticResource FontSizeCaption}"/>
+                        </Expander.Header>
+                        <ScrollViewer MaxHeight="260">
+                          <SelectableTextBlock Text="{Binding FinalText}" TextWrapping="Wrap"
+                                               FontSize="{StaticResource FontSizeBody}"
+                                               Foreground="{DynamicResource TextBrush}"/>
+                        </ScrollViewer>
+                      </Expander>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Panel>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

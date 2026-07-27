@@ -11,7 +11,7 @@
 ; =============================================================================
 
 #define AppName "Quorum"
-#define AppVersion "5.0.0"
+#define AppVersion "5.0.1"
 #define AppPublisher "Leonardo Gonzaga"
 #define AppURL "https://github.com/LJCGJ/Quorum.Studio"
 #define AppExe "Quorum.App.exe"
